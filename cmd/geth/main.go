@@ -18,10 +18,11 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"math"
 	"os"
 	godebug "runtime/debug"
@@ -215,7 +216,6 @@ var (
 	}
 
 	customFlags = []cli.Flag {
-		utils.MeasureOPcodeFlag,
 		utils.MeasureDSNFlag,
 	}
 )
@@ -389,21 +389,17 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	ethClient := ethclient.NewClient(rpcClient)
 
 	// OPCODE 성능 측정 파라미터
-	if ctx.GlobalBool(utils.MeasureOPcodeFlag.Name) {
-		log.Info("[custom] Enabled opcode measurement")
-
-		dsn := ctx.GlobalString(utils.MeasureDSNFlag.Name)
-		db, err := sql.Open("mysql", dsn)
+	if dsn := ctx.GlobalString(utils.MeasureDSNFlag.Name); dsn != "" {
+		log.Info("[custom] Enabled collectting measurement")
+		client, err := mongo.NewClient(options.Client().ApplyURI(dsn))
 		if err != nil {
-			panic(err)
+			utils.Fatalf("Failed to initialize with mongodb database: %v", err)
 		}
 
-		db.SetMaxOpenConns(120)
-		db.SetConnMaxLifetime(time.Second * 10)
+		vm.Client = client
+		vm.EnableMeasure()
 
-		vm.LogDB = db
-
-		core.LogDB = db
+		core.Client = client
 		core.EnableMeasure()
 	}
 

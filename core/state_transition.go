@@ -17,7 +17,12 @@
 package core
 
 import (
-	"database/sql"
+	"context"
+	"fmt"
+	"github.com/ethereum/go-ethereum/cmd/utils"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"log"
 	"math"
 	"math/big"
 	"sync"
@@ -79,19 +84,10 @@ type ExecutionResult struct {
 	ReturnData []byte // Returned data from evm(function result or data supplied with revert opcode)
 }
 
-type LogRow struct {
-	elapsedTime int64
-	gasUsed     uint64
-	sender      string
-	toAddress   string
-	nonce       uint64
-	blockNumber int64
-}
-
 var (
-	LogDB         *sql.DB = nil
+	Client         *mongo.Client = nil
 	enableMeasure         = false
-	logRows               = make([]LogRow, 5001)
+	logRows               = make([]interface{}, 5001)
 	logRowIndex           = 0
 	logMux        sync.Mutex
 )
@@ -294,57 +290,46 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	// 시간 측정 시작
 	if enableMeasure {
+		ctx,_ := context.WithTimeout(context.Background(), 10 * time.Second)
+		err := Client.Connect(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer Client.Disconnect(ctx)
+		collection := Client.Database("balanceMeter").Collection("transitions")
+
 		blockNumber := st.evm.BlockNumber.Int64()
-		targetBlockNumber := int64(5000000)
-		if blockNumber > targetBlockNumber {
-			elapsed := time.Now().UnixNano() - start_time.UnixNano()
-			toAddress := "-"
-			if msg.To() != nil {
-				toAddress = msg.To().String()
-			}
 
+		elapsed := time.Now().UnixNano() - start_time.UnixNano()
+		toAddress := "-"
+		if msg.To() != nil {
+			toAddress = msg.To().String()
+		}
+
+		logMux.Lock()
+		logRows[logRowIndex] = bson.D {
+			{"elapsedTime", elapsed},
+			{"gasUsed", gasUsed},
+			{"sender", msg.From().String()},
+			{"toAddress", toAddress},
+			{"nonce", msg.Nonce()},
+			{"blockNumber", blockNumber},
+		}
+		logRowIndex++
+		logMux.Unlock()
+
+		if logRowIndex == 2500 {
 			logMux.Lock()
-			logRows[logRowIndex].elapsedTime = elapsed
-			logRows[logRowIndex].gasUsed = gasUsed
-			logRows[logRowIndex].sender = msg.From().String()
-			logRows[logRowIndex].toAddress = toAddress
-			logRows[logRowIndex].nonce = msg.Nonce()
-			logRows[logRowIndex].blockNumber = blockNumber
-			logRowIndex++
-			logMux.Unlock()
+			logRowIndex = 0
 
-			if logRowIndex == 2500 {
-				logMux.Lock()
-				logRowIndex = 0
-
-				qry := `INSERT INTO transition_logs(elapsed_time, gas_used, sender, to_address, nonce, block_number) VALUES `
-				var valueArgs []interface{}
-
-				for i := 0; i < 2500; i++ {
-					qry += "(?, ?, ?, ?, ?, ?),"
-					row := logRows[i]
-					valueArgs = append(valueArgs, row.elapsedTime)
-					valueArgs = append(valueArgs, row.gasUsed)
-					valueArgs = append(valueArgs, row.sender)
-					valueArgs = append(valueArgs, row.toAddress)
-					valueArgs = append(valueArgs, row.nonce)
-					valueArgs = append(valueArgs, row.blockNumber)
-				}
-				qry = qry[0 : len(qry)-1]
-
-				stmt, err := LogDB.Prepare(qry)
-				if err != nil {
-					panic(err)
-				}
-
-				_, err = stmt.Exec(valueArgs...)
-				if err != nil {
-					panic(err)
-				}
-
-				stmt.Close()
-				logMux.Unlock()
+			result, err := collection.InsertMany(context.TODO(), logRows)
+			if err != nil {
+				utils.Fatalf("error occurred during measuring transitions. %v", err)
 			}
+
+			fmt.Printf("[state_transition.go] Inserted %v documents", result.InsertedIDs)
+
+			logMux.Unlock()
 		}
 	}
 

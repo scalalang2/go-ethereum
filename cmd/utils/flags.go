@@ -718,13 +718,9 @@ var (
 		Usage: "External EVM configuration (default = built-in interpreter)",
 		Value: "",
 	}
-	MeasureOPcodeFlag = cli.BoolFlag {
-		Name: "measure.opcode",
-		Usage: "Measure OPCODE performance",
-	}
 	MeasureDSNFlag = cli.StringFlag {
 		Name: "measure.dsn",
-		Usage: "DSN for mysql database",
+		Usage: "DSN for mongodb database",
 		Value: "",
 	}
 )

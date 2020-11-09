@@ -30,30 +30,27 @@
 package vm
 
 import (
-	"database/sql"
+	"context"
+	"fmt"
+	"github.com/ethereum/go-ethereum/cmd/utils"
+	"log"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/holiman/uint256"
 	"golang.org/x/crypto/sha3"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type LogRow struct {
-	opcode          string
-	elapsedTime     int64
-	sender          string
-	contractAddress string
-	blockNumber     int64
-}
-
 var (
-	LogDB         *sql.DB = nil
+	Client         *mongo.Client = nil
 	enableMeasure         = false
-	rowLogs               = make([]LogRow, 5001)
+	rowLogs               = make([]interface{}, 5001)
 	rowLogsIndex          = 0
 	rowMux        sync.Mutex
 )
@@ -67,6 +64,15 @@ func measureTime(start time.Time, op string, interpreter *EVMInterpreter, callCo
 		return
 	}
 
+	ctx,_ := context.WithTimeout(context.Background(), 10 * time.Second)
+	err := Client.Connect(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer Client.Disconnect(ctx)
+
+	collection := Client.Database("balanceMeter").Collection("opcodes")
+
 	blockNumber := interpreter.evm.BlockNumber.Int64()
 
 	// TO-DO: MongoDB로 바꾸기
@@ -78,11 +84,13 @@ func measureTime(start time.Time, op string, interpreter *EVMInterpreter, callCo
 	contractAddress := callContext.contract.self.Address().String()
 
 	rowMux.Lock()
-	rowLogs[rowLogsIndex].blockNumber = blockNumber
-	rowLogs[rowLogsIndex].sender = senderAddress
-	rowLogs[rowLogsIndex].contractAddress = contractAddress
-	rowLogs[rowLogsIndex].opcode = op
-	rowLogs[rowLogsIndex].elapsedTime = elapsed
+	rowLogs[rowLogsIndex] = bson.D {
+		{"blockNumber", blockNumber},
+		{"sender", senderAddress},
+		{"contractAddress", contractAddress},
+		{"opcode", op},
+		{"elapsedTime", elapsed},
+	}
 	rowLogsIndex++
 	rowMux.Unlock()
 
@@ -90,31 +98,13 @@ func measureTime(start time.Time, op string, interpreter *EVMInterpreter, callCo
 		rowMux.Lock()
 		rowLogsIndex = 0
 
-		qry := `INSERT INTO opcode_logs(opcode, elapsed_time, sender, contractAddress, block_number) VALUES `
-		var valueArgs []interface{}
-
-		for i := 0; i < 2500; i++ {
-			qry += "(?, ?, ?, ?, ?),"
-			row := rowLogs[i]
-			valueArgs = append(valueArgs, row.opcode)
-			valueArgs = append(valueArgs, row.elapsedTime)
-			valueArgs = append(valueArgs, row.sender)
-			valueArgs = append(valueArgs, row.contractAddress)
-			valueArgs = append(valueArgs, row.blockNumber)
-		}
-
-		qry = qry[0 : len(qry)-1]
-		stmt, err := LogDB.Prepare(qry)
+		result, err := collection.InsertMany(context.TODO(), rowLogs)
 		if err != nil {
-			panic(err)
+			utils.Fatalf("error occurred during measuring instructions. %v", err)
 		}
 
-		_, err = stmt.Exec(valueArgs...)
-		if err != nil {
-			panic(err)
-		}
+		fmt.Printf("[instructions.go] Inserted %v documents", result.InsertedIDs)
 
-		stmt.Close()
 		rowMux.Unlock()
 	}
 }
