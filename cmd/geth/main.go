@@ -390,7 +390,9 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 
 	// OPCODE 성능 측정 파라미터
 	if dsn := ctx.GlobalString(utils.MeasureDSNFlag.Name); dsn != "" {
-		log.Info("[custom] Enabled collectting measurement")
+		log.Info("[collector] Enables the data collection mode.")
+		log.Info(fmt.Sprintf("[collector] mognodb uri: %s", dsn))
+
 		client, err := mongo.NewClient(options.Client().ApplyURI(dsn))
 		if err != nil {
 			utils.Fatalf("Failed to initialize with mongodb database: %v", err)
