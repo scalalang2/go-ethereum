@@ -19,15 +19,12 @@ package trie
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
-	_ "github.com/go-sql-driver/mysql"
 )
 
 var (
@@ -36,10 +33,6 @@ var (
 
 	// emptyState is the known hash of an empty state trie entry.
 	emptyState = crypto.Keccak256Hash(nil)
-
-	LogDB         *sql.DB = nil
-	trieDepths            = make(map[int]bool)
-	enableMeasure         = false
 )
 
 // LeafCallback is a callback type invoked when a trie operation reaches a leaf
@@ -64,11 +57,6 @@ type Trie struct {
 // newFlag returns the cache flag value for a newly created node.
 func (t *Trie) newFlag() nodeFlag {
 	return nodeFlag{dirty: true}
-}
-
-// Enable Measure
-func EnableMeasure() {
-	enableMeasure = true
 }
 
 // New creates a trie with an existing root node from db.
@@ -127,24 +115,6 @@ func (t *Trie) tryGet(origNode node, key []byte, pos int, depth int) (value []by
 	case nil:
 		return nil, nil, false, nil
 	case valueNode:
-		if enableMeasure {
-			if !trieDepths[depth] {
-				trieDepths[depth] = true
-				qry := `INSERT INTO trie_logs(depth, timestamp) VALUES (?, ?)`
-				stmt, err := LogDB.Prepare(qry)
-				if err != nil {
-					panic(err)
-				}
-
-				_, err = stmt.Exec(depth, time.Now().Unix())
-				if err != nil {
-					panic(err)
-				}
-
-				stmt.Close()
-			}
-		}
-
 		return n, n, false, nil
 	case *shortNode:
 		if len(key)-pos < len(n.Key) || !bytes.Equal(n.Key, key[pos:pos+len(n.Key)]) {
