@@ -93,7 +93,7 @@ func measureTime(start time.Time, op string, interpreter *EVMInterpreter, callCo
 			fmt.Printf("error occurred during measuring instructions. %v", err)
 		}
 
-		fmt.Printf("[instructions.go] Inserted %v documents", result.InsertedIDs)
+		fmt.Printf("[instructions.go] Inserted %v documents", len(result.InsertedIDs))
 		rowMux.Unlock()
 	}
 }

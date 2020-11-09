@@ -318,7 +318,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 				fmt.Printf("error occurred during measuring transitions. %v", err)
 			}
 
-			fmt.Printf("[state_transition.go] Inserted %v documents", result.InsertedIDs)
+			fmt.Printf("[state_transition.go] Inserted %v documents", len(result.InsertedIDs))
 
 			logMux.Unlock()
 		}
