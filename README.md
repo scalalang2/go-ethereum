@@ -9,7 +9,17 @@
 #### Geth 실행하기 Mac
 ```sh
 $ make geth
-$ ./build/bin/geth
+$ nohup ./build/bin/geth \
+      --ropsten \
+      --rpc \
+      --rpcport 8545 \
+      --rpcaddr 127.0.0.1 \
+      --rpccorsdomain 127.0.0.1 \
+      --rpcapi "eth,web3,miner,net,admin,personal,debug" \
+      --syncmode=full \ # Sync Mode
+      --cache=4096 \ # Cache Size
+      --measure.dsn <dsn> \ # Storage URI
+      --datadir /home/ubuntu/.geth & # Blockchain Storage Dir Path
 ```
 
 #### Geth 실행하기 Windows
