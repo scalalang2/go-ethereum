@@ -313,7 +313,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			logMux.Lock()
 			logRowIndex = 0
 
-			result, err := collection.InsertMany(context.TODO(), logRows[:2500])
+			_, err := collection.InsertMany(context.TODO(), logRows[:2500])
 			if err != nil {
 				fmt.Printf("error occurred during measuring transitions. %v", err)
 			}
