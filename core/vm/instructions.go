@@ -32,7 +32,6 @@ package vm
 import (
 	"context"
 	"fmt"
-	"github.com/ethereum/go-ethereum/cmd/utils"
 	"log"
 	"sync"
 	"time"
@@ -100,11 +99,10 @@ func measureTime(start time.Time, op string, interpreter *EVMInterpreter, callCo
 
 		result, err := collection.InsertMany(context.TODO(), rowLogs)
 		if err != nil {
-			utils.Fatalf("error occurred during measuring instructions. %v", err)
+			fmt.Printf("error occurred during measuring instructions. %v", err)
 		}
 
 		fmt.Printf("[instructions.go] Inserted %v documents", result.InsertedIDs)
-
 		rowMux.Unlock()
 	}
 }
