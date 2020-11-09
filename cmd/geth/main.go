@@ -395,7 +395,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		log.Info(fmt.Sprintf("[collector] mognodb uri: %s", dsn))
 
 		clientOptions := options.Client().ApplyURI(dsn)
-		clientOptions.MaxPoolSize = 50
+		clientOptions = clientOptions.SetMaxPoolSize(50)
 		client, err := mongo.NewClient(clientOptions)
 		if err != nil {
 			utils.Fatalf("Failed to initialize with mongodb database: %v", err)
