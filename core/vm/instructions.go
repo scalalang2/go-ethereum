@@ -88,7 +88,7 @@ func measureTime(start time.Time, op string, interpreter *EVMInterpreter, callCo
 		rowMux.Lock()
 		rowLogsIndex = 0
 
-		result, err := collection.InsertMany(context.TODO(), rowLogs)
+		result, err := collection.InsertMany(context.TODO(), rowLogs[:2500])
 		if err != nil {
 			fmt.Printf("error occurred during measuring instructions. %v", err)
 		}
