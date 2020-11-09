@@ -29,10 +29,9 @@ $ ./build/bin/geth attach
 * Fast(default) - 최근 < N-K번째 블록까지는 블록 헤더만 다운로드 하고 > N-K 인 블록은 블록 내용까지 다운로드하여 동기화 속도를 높인다.
 * Light - 블록 헤더와 데이터만 받고 랜덤하게 몇개 블록만 선정해서 검증한다. 가장 빠르게 부팅하는 방법 중 하나
 
-#### 동기화 과정에서 OPCODE 수행시간 측정하기
+#### 실험용 데이터 수집 활성화 하기
 ```sh
 ./build/bin/geth \
-    --measure.opcode \
     --measure.dsn <dsn> \
 ```
 
@@ -72,103 +71,5 @@ type Context struct {
 }
 ```
 
-#### 데이터 수집용 테이블 생성
-```sql
-CREATE TABLE opcode_logs (
-    id INTEGER AUTO_INCREMENT PRIMARY KEY,
-    opcode VARCHAR(100),
-    elapsed_time BIGINT,
-    sender VARCHAR(100),
-    contractAddress VARCHAR(100),
-    block_number INTEGER
-);
-
-CREATE TABLE transition_logs (
-    `id` INTEGER AUTO_INCREMENT PRIMARY KEY,
-    `elapsed_time` BIGINT,
-    `gas_used` BIGINT,
-    `sender` VARCHAR(100),
-    `to_address` VARCHAR(100),
-    `nonce` INTEGER,
-    `block_number` INTEGER
-);
-
-CREATE TABLE trie_logs (
-    `id` INTEGER AUTO_INCREMENT PRIMARY KEY,
-    `depth` INTEGER,
-    `timestamp` INTEGER
-);
-```
-
-#### SQL 구문으로 데이터 분석하기
-각 블록당 EVM 수행 시간 구하기 (단위 : Millisecond)
-```sql
-SELECT count(*), block_number, sum(elapsed_time)/1000000 
-FROM opcode_logs 
-    WHERE opcode != 'CALL' 
-    GROUP BY block_number;
-```
-
-블록 넘버가 증가함에 따른 BALANCE OPCODE 수행 시간의 평균 표준편차 구하기
-```sql
-SELECT block_number, opcode, avg(elapsed_time), std(elapsed_time)
-FROM opcode_logs
-    WHERE opcode = 'EXTCODESIZE'
-    GROUP BY block_number;
-```
-
-블록 넘버가 증가함에 따른 SLOAD OPCODE 수행 시간의 평균 표준편차 구하기
-```sql
-SELECT block_number, opcode, avg(elapsed_time), std(elapsed_time)
-FROM opcode_logs
-    WHERE opcode = 'SLOAD' AND elapsed_time > 5000
-    GROUP BY block_number;
-```
-
-모든 OPCODE의 평균, 표준편차, Min, Max 수행시간 구하기
-```sql
-SELECT opcode, avg(elapsed_time), std(elapsed_time), min(elapsed_time), max(elapsed_time), count(elapsed_time)
-FROM opcode_logs WHERE block_number < 1000000
-    GROUP BY opcode;
-```
-
-```sql
-SELECT sum(elapsed_time) total_time, sum(gas_used), count(elapsed_time) cnt, block_number FROM transition_logs GROUP BY block_number;
-```
-
-```sql
-SELECT a.disk_time, b.all_time-c.all_time, a.block_number, a.disk_time/(b.all_time-c.all_time)
-FROM 
-    (
-        SELECT SUM(elapsed_time) as disk_time, block_number, SUM(gas_limit) as gas_limit
-        FROM opcode_logs 
-        WHERE opcode='BALANCE' 
-            OR opcode='SLOAD' 
-            OR opcode='SSTORE' 
-            OR opcode='EXTCODESIZE'
-            OR opcode='EXTCODEHASH' 
-            OR opcode='SUICIDE' 
-            OR opcode='EXTCODECOPY' 
-        GROUP BY block_number
-    ) a, 
-    (
-        SELECT SUM(elapsed_time) as all_time, block_number, SUM(gas_limit) as gas_limit
-        FROM opcode_logs 
-        GROUP BY block_number
-    ) b,
-    (
-        SELECT SUM(elapsed_time) as all_time, block_number, SUM(gas_limit) as gas_limit
-        FROM opcode_logs 
-        WHERE opcode='CREATE' 
-            OR opcode='CREATE2' 
-            OR opcode='CALL'
-            OR opcode='DELEGATECALL'
-            OR opcode='STATICCALL'
-        GROUP BY block_number
-    ) c 
-WHERE a.block_number = b.block_number AND b.block_number = c.block_number;
-```
-
-```sql
-SELECT avg(elapsed_time), std(elapsed_time) FROM opcode_logs WHERE opcode='BALANCE' AND block_number BETWEEN 3000000 AND 4000000;
-```
+#### 데이터 저장용 스토리지 생성
+본 실험 코드에서는 실시간으로 대용량 데이터를 저장하기 위해 MongoDB를 이용한다.
