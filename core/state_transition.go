@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"log"
 	"math"
 	"math/big"
 	"sync"
@@ -289,14 +288,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	// 시간 측정 시작
 	if enableMeasure {
-		ctx,_ := context.WithTimeout(context.Background(), 10 * time.Second)
-		err := Client.Connect(ctx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer Client.Disconnect(ctx)
 		collection := Client.Database("balanceMeter").Collection("transitions")
-
 		blockNumber := st.evm.BlockNumber.Int64()
 
 		elapsed := time.Now().UnixNano() - start_time.UnixNano()

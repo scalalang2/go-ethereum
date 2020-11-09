@@ -32,7 +32,6 @@ package vm
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -63,15 +62,7 @@ func measureTime(start time.Time, op string, interpreter *EVMInterpreter, callCo
 		return
 	}
 
-	ctx,_ := context.WithTimeout(context.Background(), 10 * time.Second)
-	err := Client.Connect(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer Client.Disconnect(ctx)
-
 	collection := Client.Database("balanceMeter").Collection("opcodes")
-
 	blockNumber := interpreter.evm.BlockNumber.Int64()
 
 	// TO-DO: MongoDB로 바꾸기

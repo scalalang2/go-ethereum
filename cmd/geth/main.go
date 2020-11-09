@@ -18,6 +18,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -393,10 +394,19 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		log.Info("[collector] Enables the data collection mode.")
 		log.Info(fmt.Sprintf("[collector] mognodb uri: %s", dsn))
 
-		client, err := mongo.NewClient(options.Client().ApplyURI(dsn))
+		clientOptions := options.Client().ApplyURI(dsn)
+		clientOptions.MaxPoolSize = 50
+		client, err := mongo.NewClient(clientOptions)
 		if err != nil {
 			utils.Fatalf("Failed to initialize with mongodb database: %v", err)
 		}
+
+		ctx,_ := context.WithTimeout(context.Background(), 30 * time.Second)
+		err = client.Connect(ctx)
+		if err != nil {
+			fmt.Printf("Failed to connect mongodb database : %v", err)
+		}
+		log.Info("[collector] connected to mongodb")
 
 		vm.Client = client
 		vm.EnableMeasure()

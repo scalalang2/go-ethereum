@@ -6,7 +6,7 @@
 2. go get github.com/scalalang2/go-ethereum 으로 소스코드 내려 받기
 3. `go mod tidy && go mod vendor` 명령어로 의존성 패키지 다운로드
 
-#### Geth 실행하기 Mac
+#### Geth 실행하기 Linux/Mac
 ```sh
 $ make geth
 $ nohup ./build/bin/geth \
