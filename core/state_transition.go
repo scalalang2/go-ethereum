@@ -19,7 +19,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/ethereum/go-ethereum/cmd/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"log"
@@ -324,7 +323,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 			result, err := collection.InsertMany(context.TODO(), logRows)
 			if err != nil {
-				utils.Fatalf("error occurred during measuring transitions. %v", err)
+				fmt.Printf("error occurred during measuring transitions. %v", err)
 			}
 
 			fmt.Printf("[state_transition.go] Inserted %v documents", result.InsertedIDs)
