@@ -62,10 +62,14 @@ func measureTime(start time.Time, op string, interpreter *EVMInterpreter, callCo
 		return
 	}
 
-	collection := Client.Database("balanceMeter").Collection("opcodes")
+	// Sampling from every 5 blocks.
 	blockNumber := interpreter.evm.BlockNumber.Int64()
+	if blockNumber % 10 != 0 {
+		return
+	}
 
-	// TO-DO: MongoDB로 바꾸기
+	// MongoDB Data Collection
+	collection := Client.Database("balanceMeter").Collection("opcodes")
 	_start := start.UnixNano()
 	_end := time.Now().UnixNano()
 	elapsed := _end - _start
