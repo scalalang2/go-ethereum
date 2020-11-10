@@ -47,6 +47,7 @@ import (
 
 var (
 	Client         *mongo.Client = nil
+	SamplingRate int64	  = 25
 	enableMeasure         = false
 	rowLogs               = make([]interface{}, 5001)
 	rowLogsIndex          = 0
@@ -64,7 +65,7 @@ func measureTime(start time.Time, op string, interpreter *EVMInterpreter, callCo
 
 	// Sampling from every 5 blocks.
 	blockNumber := interpreter.evm.BlockNumber.Int64()
-	if blockNumber % 10 != 0 {
+	if blockNumber % SamplingRate != 0 {
 		return
 	}
 
