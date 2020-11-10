@@ -86,19 +86,16 @@ func measureTime(start time.Time, op string, interpreter *EVMInterpreter, callCo
 		{"elapsedTime", elapsed},
 	}
 	rowLogsIndex++
-	rowMux.Unlock()
 
 	if rowLogsIndex == 2500 {
-		rowMux.Lock()
 		rowLogsIndex = 0
 
 		_, err := collection.InsertMany(context.TODO(), rowLogs[:2500])
 		if err != nil {
 			fmt.Printf("error occurred during measuring instructions. %v", err)
 		}
-
-		rowMux.Unlock()
 	}
+	rowMux.Unlock()
 }
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {

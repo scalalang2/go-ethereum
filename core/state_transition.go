@@ -307,19 +307,16 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			{"blockNumber", blockNumber},
 		}
 		logRowIndex++
-		logMux.Unlock()
 
 		if logRowIndex == 2500 {
-			logMux.Lock()
 			logRowIndex = 0
 
 			_, err := collection.InsertMany(context.TODO(), logRows[:2500])
 			if err != nil {
 				fmt.Printf("error occurred during measuring transitions. %v", err)
 			}
-
-			logMux.Unlock()
 		}
+		logMux.Unlock()
 	}
 
 	return &ExecutionResult{
