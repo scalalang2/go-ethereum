@@ -59,7 +59,7 @@ func EnableMeasure() {
 }
 
 func measureTime(start time.Time, op string, interpreter *EVMInterpreter, callContext *callCtx) {
-	if !enableMeasure {
+	if enableMeasure {
 		return
 	}
 

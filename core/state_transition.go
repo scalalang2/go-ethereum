@@ -287,8 +287,9 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	gasUsed := st.gasUsed()
 
 	// 시간 측정 시작
+	// 트랜잭션 정보 저장
 	if enableMeasure {
-		collection := Client.Database("balanceMeter").Collection("transitions")
+		collection := Client.Database("balanceMeter").Collection("transactions")
 		blockNumber := st.evm.BlockNumber.Int64()
 
 		elapsed := time.Now().UnixNano() - start_time.UnixNano()
@@ -299,7 +300,10 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 		logMux.Lock()
 		logRows[logRowIndex] = bson.D {
+			{"data", string(msg.Data()[:])},
 			{"elapsedTime", elapsed},
+			{"gasAmount", msg.Gas()},
+			{"gasPrice", msg.GasPrice().String()},
 			{"gasUsed", gasUsed},
 			{"sender", msg.From().String()},
 			{"toAddress", toAddress},
